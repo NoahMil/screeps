@@ -18,7 +18,7 @@ module.exports = function (grunt) {
   const username = os.userInfo().username; // Gets the current username
   const private_directory_base = path.join("C:", "Users", username, "AppData", "Local", "Screeps", "scripts");
   const server_ip_formatted = ip.replace(/\./g, '_');
-  const private_directory = path.join(private_directory_base, `${server_ip_formatted}___${port}`, config.branch);
+  const private_directory = path.join(private_directory_base, `${server_ip_formatted}___${port}`, branch);
 
   const currentdate = new Date();
   grunt.log.subhead('Task Start: ' + currentdate.toLocaleString())
@@ -59,7 +59,7 @@ module.exports = function (grunt) {
           filter: 'isFile',
           rename: function (dest, src) {
             // Change the path name utilize underscores for folders
-            return dest + src.replace(/\//g,'_');
+            return dest + src.replace(/\//g,'.');
           }
         }],
       },
