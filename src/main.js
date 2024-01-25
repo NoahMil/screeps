@@ -4,46 +4,43 @@ var roleBuilder = require('role.builder');
 var roleFighter = require('role.fighter');
 
 
-module.exports.loop = function () {
+const workerParts = [WORK,CARRY,MOVE];
+const fighterParts = [ATTACK,MOVE];
 
+module.exports.loop = function () {
+    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester');
+    var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role === 'upgrader');
+    var builders = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder');
+    var fighters = _.filter(Game.creeps, (creep) => creep.memory.role === 'fighter');
+
+    // Stuff
     for(var name in Memory.creeps) {
         if(!Game.creeps[name]) {
             delete Memory.creeps[name];
         }
     }
 
-    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-    var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-    var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
-    var fighters = _.filter(Game.creeps, (creep) => creep.memory.role == 'fighter');
-
-
+    // Spawner
     if(harvesters.length < 2) {
         var newName = 'Harvester' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep([WORK,WORK,CARRY,CARRY,MOVE], newName,
+        Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'harvester'}});
     }
-
     if(upgraders.length < 1) {
         var newName = 'Upgrader' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep([WORK, WORK, WORK, CARRY,MOVE], newName,
+        Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'upgrader'}});
     }
-
     if(builders.length < 8 && harvesters.length >= 2 && upgraders.length >= 1 ) {
         var newName = 'Builder' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep([WORK,WORK,CARRY,CARRY,MOVE], newName,
+        Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'builder'}});
     }
-
     if(fighters.length < 0) {
         var newName = 'Fighter' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep([ATTACK, ATTACK, MOVE], newName,
+        Game.spawns['Spawn1'].spawnCreep(fighterParts, newName,
             {memory: {role: 'fighter'}});
     }
-
-
-
     if(Game.spawns['Spawn1'].spawning) {
         var spawningCreep = Game.creeps[Game.spawns['Spawn1'].spawning.name];
         Game.spawns['Spawn1'].room.visual.text(
@@ -53,19 +50,18 @@ module.exports.loop = function () {
             {align: 'left', opacity: 0.8});
     }
 
+    // Creeps
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
         if(creep.memory.role == 'harvester') {
-            roleHarvester.run(creep);
+            creep.runHarvester();
         }
         if(creep.memory.role == 'upgrader') {
             roleUpgrader.run(creep);
         }
-
         if(creep.memory.role == 'builder') {
             roleBuilder.run(creep);
         }
-
         if(creep.memory.role == 'fighter') {
             roleFighter.run(creep);
         }
