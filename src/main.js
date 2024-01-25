@@ -35,7 +35,7 @@ module.exports.loop = function () {
         Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'harvester'}});
     }
-    /*if(upgraders.length < 1) {
+    if(upgraders.length < 5) {
         var newName = 'Upgrader' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'upgrader'}});
@@ -57,7 +57,7 @@ module.exports.loop = function () {
             Game.spawns['Spawn1'].pos.x + 1,
             Game.spawns['Spawn1'].pos.y,
             {align: 'left', opacity: 0.8});
-    }*/
+    }
 
 
     // Creeps
