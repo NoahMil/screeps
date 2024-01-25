@@ -1,3 +1,5 @@
+require('extensions.creepExtension');
+
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
@@ -5,7 +7,7 @@ var roleFighter = require('role.fighter');
 var roleRenamer = require('role.renamer');
 
 
-const workerParts = [WORK,CARRY,MOVE];
+const workerParts = [WORK,WORK, CARRY, MOVE];
 const renamerParts = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
 const fighterParts = [ATTACK,MOVE];
 
@@ -25,7 +27,7 @@ module.exports.loop = function () {
     }
 
     // Spawner
-    if (renamers.length !== 1)
+    if (renamers.length !== 0)
     {var newName = 'Renamer' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(renamerParts, newName,
             {memory: {role: 'renamer'}});
@@ -35,7 +37,7 @@ module.exports.loop = function () {
         Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'harvester'}});
     }
-    if(upgraders.length < 5) {
+    if(upgraders.length < 2) {
         var newName = 'Upgrader' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'upgrader'}});
@@ -63,19 +65,19 @@ module.exports.loop = function () {
     // Creeps
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
-        if(creep.memory.role == 'harvester') {
+        if(creep.memory.role === 'harvester') {
             creep.runHarvester();
         }
-        if(creep.memory.role == 'upgrader') {
-            roleUpgrader.run(creep);
+        if(creep.memory.role === 'upgrader') {
+            creep.runUpgrader(creep);
         }
-        if(creep.memory.role == 'builder') {
-            roleBuilder.run(creep);
+        if(creep.memory.role === 'builder') {
+            creep.runBuilder(creep);
         }
-        if(creep.memory.role == 'fighter') {
+        if(creep.memory.role === 'fighter') {
             roleFighter.run(creep);
         }
-        if(creep.memory.role == 'renamer') {
+        if(creep.memory.role === 'renamer') {
             roleRenamer.run(creep);
         }
     }
