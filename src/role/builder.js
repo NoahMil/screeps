@@ -5,6 +5,7 @@ var roleBuilder = {
 
         if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.building = false;
+            creep.memory.reparing = false;
             creep.say('🔄 harvest');
         }
         if(!creep.memory.building && creep.store.getFreeCapacity() == 0) {
@@ -12,10 +13,24 @@ var roleBuilder = {
             creep.say('🚧 build');
         }
 
+        if(!creep.memory.building && creep.store.getFreeCapacity() == 0) {
+            creep.memory.reparing = true;
+            creep.say('🚧 repairing');
+        }
+
         if(creep.memory.building) {
             var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
             if(targets.length) {
                 if(creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                }
+            }
+        }
+
+        if(creep.memory.repairing) {
+            var targets = creep.room.find(FIND_MY_STRUCTURES);
+            if(targets.length) {
+                if(creep.repair(targets[0]) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
                 }
             }
