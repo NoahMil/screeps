@@ -32,15 +32,19 @@ Creep.prototype.stateHarvestEnergy = function () {
                 this.say("🛒");
                 break;
             case 'builder':
-                // Check if there are construction sites before transitioning to building
-                const constructionSites = this.room.find(FIND_CONSTRUCTION_SITES);
-                if (constructionSites.length) {
-                    this.memory.state = global.STATE_BUILDING_ENERGY;
-                    this.say("🧱");
-                } else {
-                    // No construction sites, transition to repairing
-                    this.memory.state = global.STATE_REPAIRING_ENERGY;
-                    this.say("🔧");
+                if (this.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+                    this.memory.targetSourceId = null;
+                    // First check for construction sites
+                    const constructionSites = this.room.find(FIND_CONSTRUCTION_SITES);
+                    if (constructionSites.length) {
+                        this.memory.state = global.STATE_BUILDING_ENERGY;
+                        this.say("🧱");
+                    } else {
+                        // Then transition to delivering energy
+                        this.memory.state = global.STATE_DELIVERING_ENERGY;
+                        this.say("🛒");
+                        break;
+                    }
                 }
                 break;
             case 'upgrader':
@@ -61,11 +65,11 @@ Creep.prototype.stateDeliverEnergy = function () {
         }
     });
 
-    // If no extensions are found, then look for spawns
+    // If no extensions are found, then look for spawns and towers
     if (deliverySpots.length === 0) {
         deliverySpots = this.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return structure.structureType === STRUCTURE_SPAWN &&
+                return (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER) &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
         });

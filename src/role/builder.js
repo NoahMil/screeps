@@ -20,6 +20,9 @@ Creep.prototype.runBuilder = function () {
         case global.STATE_REPAIRING_ENERGY:
             this.stateRepairEnergy();
             break;
+        case global.STATE_DELIVERING_ENERGY:
+            this.stateDeliverEnergy();
+            break;
         default:
             this.memory.state = global.STATE_HARVESTING_ENERGY;
     }
