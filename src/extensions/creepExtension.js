@@ -3,6 +3,8 @@ global.STATE_DELIVERING_ENERGY = 'delivering_energy';
 global.STATE_LOOTING_ENERGY = 'looting_energy';
 global.STATE_BUILDING_ENERGY = 'building_energy';
 global.STATE_UPGRADING_ENERGY = 'upgrading_energy'
+global.STATE_REPAIRING_ENERGY = 'repairing_energy'
+
 
 const {random} = require("lodash");
 Creep.prototype.stateHarvestEnergy = function () {
@@ -22,23 +24,31 @@ Creep.prototype.stateHarvestEnergy = function () {
 
     if (this.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
         this.memory.targetSourceId = null;
-        if (this.memory.role === 'harvester') {
-            this.memory.state = global.STATE_DELIVERING_ENERGY;
-            this.say("🛒");
-        }
-        if (this.memory.role === 'builder') {
-            this.memory.state = global.STATE_BUILDING_ENERGY;
-            this.say("🧱");
-        }
-
-        if (this.memory.role === 'upgrader') {
-            this.memory.state = global.STATE_UPGRADING_ENERGY;
-            this.say("📈");
-        }
+        switch (this.memory.role) {
+            case 'harvester':
+                this.memory.state = global.STATE_DELIVERING_ENERGY;
+                this.say("🛒");
+                break;
+            case 'builder':
+                // Check if there are construction sites before transitioning to building
+                const constructionSites = this.room.find(FIND_CONSTRUCTION_SITES);
+                if (constructionSites.length) {
+                    this.memory.state = global.STATE_BUILDING_ENERGY;
+                    this.say("🧱");
+                } else {
+                    // No construction sites, transition to repairing
+                    this.memory.state = global.STATE_REPAIRING_ENERGY;
+                    this.say("🔧");
+                }
+                break;
+            case 'upgrader':
+                this.memory.state = global.STATE_UPGRADING_ENERGY;
+                this.say("📈");
+                break;
 }
 
 
-    Creep.prototype.stateDeliverEnergy = function () {
+Creep.prototype.stateDeliverEnergy = function () {
         // First, try to find extensions with free capacity
         let deliverySpots = this.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
@@ -109,13 +119,20 @@ Creep.prototype.stateLootEnergy = function () {
 }}
 
 Creep.prototype.stateBuildEnergy = function () {
-    var targets = this.room.find(FIND_CONSTRUCTION_SITES);
-    if(targets.length) {
-        if(this.build(targets[0]) === ERR_NOT_IN_RANGE) {
-            this.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
+    var constructionSites = this.room.find(FIND_CONSTRUCTION_SITES);
+    if (constructionSites.length) {
+        if (this.build(constructionSites[0]) === ERR_NOT_IN_RANGE) {
+            this.moveTo(constructionSites[0], {visualizePathStyle: {stroke: '#ffffff'}});
+        }
+    } else {
+        // No construction sites, transition to repairing for builders
+        if (this.memory.role === 'builder') {
+            this.memory.state = global.STATE_REPAIRING_ENERGY;
+            this.say("🔧");
         }
     }
 
+    // Transition to harvesting if energy is depleted
     if (this.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
         this.memory.state = global.STATE_HARVESTING_ENERGY;
         this.say("⛏️");
@@ -132,3 +149,35 @@ Creep.prototype.stateUpgradeEnergy = function () {
         this.say("⛏️");
     }
 }
+
+Creep.prototype.stateRepairEnergy = function () {
+    // Find roads that need repair
+    let roads = this.room.find(FIND_STRUCTURES, {
+        filter: (structure) => {
+            return structure.structureType === STRUCTURE_ROAD &&
+                structure.hits < structure.hitsMax;
+        }
+    });
+
+    let targetRoad = null;
+    if (this.memory.targetRoadId) {
+        targetRoad = Game.getObjectById(this.memory.targetRoadId);
+    }
+
+    // If the previous target road is no longer valid, or it's the first time, find a new target
+    if (!targetRoad || targetRoad.hits === targetRoad.hitsMax) {
+        targetRoad = roads.length > 0 ? roads[random(0, roads.length - 1)] : null;
+        this.memory.targetRoadId = targetRoad ? targetRoad.id : null;
+    }
+
+    // If a valid target road is found, proceed to repair it
+    if (targetRoad) {
+        if (this.repair(targetRoad) === ERR_NOT_IN_RANGE) {
+            this.moveTo(targetRoad, {visualizePathStyle: {stroke: '#ffaa00'}});
+        }
+    } else {
+        // If no roads need repair, transition to another state (e.g., harvesting)
+        this.memory.state = global.STATE_HARVESTING_ENERGY;
+        this.say("⛏️");
+    }
+};}
