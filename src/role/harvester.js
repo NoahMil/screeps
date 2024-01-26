@@ -1,7 +1,6 @@
 const { random } = require("lodash");
 require('extensions.creepExtension');
 
-
 var roleHarvester = {
 
     /** @param {Creep} creep **/
