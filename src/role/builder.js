@@ -25,6 +25,8 @@ Creep.prototype.runBuilder = function () {
             break;
         default:
             this.memory.state = global.STATE_HARVESTING_ENERGY;
+            console.log(this.name + ' (Builder) - Switching to default state: Harvesting Energy');
+
     }
 }
 

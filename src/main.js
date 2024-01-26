@@ -87,21 +87,26 @@ module.exports.loop = function () {
         var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
         if (closestHostile) {
             tower.attack(closestHostile);
-        }
-
-        var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (structure) => {
-                if (structure.structureType === STRUCTURE_ROAD) {
-                    return structure.hits < structure.hitsMax * 0.90;
-                } else if (structure.structureType === STRUCTURE_WALL) {
-                    return structure.hits < structure.hitsMax * 0.50;
+        } else {
+            var damagedWalls = tower.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    if (structure.structureType === STRUCTURE_WALL && structure.hits < structure.hitsMax * 0.50) {
+                        return true;
+                    } else if (structure.structureType === STRUCTURE_ROAD && structure.hits < structure.hitsMax * 0.90) {
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
-            }
-        });
+            });
 
-        if (closestDamagedStructure) {
-            tower.repair(closestDamagedStructure);
+            if (damagedWalls.length > 0) {
+                var lowestWall = damagedWalls.reduce((lowest, structure) => {
+                    return (lowest && lowest.hits < structure.hits) ? lowest : structure;
+                }, null);
+
+                if (lowestWall) {
+                    tower.repair(lowestWall);
+                }
+            }
         }
-    }
-}
+    }}

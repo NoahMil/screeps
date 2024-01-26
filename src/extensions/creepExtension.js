@@ -57,29 +57,19 @@ Creep.prototype.stateHarvestEnergy = function () {
 }
 
 Creep.prototype.stateDeliverEnergy = function () {
-    // First, try to find extensions with free capacity
-    let deliverySpots = this.room.find(FIND_STRUCTURES, {
+    var deliverySpots = this.room.find(FIND_STRUCTURES, {
         filter: (structure) => {
-            return structure.structureType === STRUCTURE_EXTENSION &&
+            return (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER || structure.structureType === STRUCTURE_EXTENSION) &&
                 structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
         }
     });
 
-    // If no extensions are found, then look for spawns and towers
-    if (deliverySpots.length === 0) {
-        deliverySpots = this.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER) &&
-                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-            }
-        });
-    }
-
-    // Proceed to transfer energy to the nearest delivery spot
+    // Proceed to transfer energy to a random delivery spot
     if (deliverySpots.length > 0) {
-        const closestDeliverySpot = this.pos.findClosestByPath(deliverySpots);
-        if (closestDeliverySpot && this.transfer(closestDeliverySpot, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-            this.moveTo(closestDeliverySpot, {visualizePathStyle: {stroke: '#ffffff'}});
+        const randomIndex = Math.floor(Math.random() * deliverySpots.length);
+        const randomDeliverySpot = deliverySpots[randomIndex];
+        if (randomDeliverySpot && this.transfer(randomDeliverySpot, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+            this.moveTo(randomDeliverySpot, {visualizePathStyle: {stroke: '#ffffff'}});
         }
     }
 
@@ -98,6 +88,7 @@ Creep.prototype.stateDeliverEnergy = function () {
         }
     }
 };
+
 
 Creep.prototype.stateLootEnergy = function () {
     const droppedResources = this.room.find(FIND_DROPPED_RESOURCES, {
@@ -132,12 +123,7 @@ Creep.prototype.stateBuildEnergy = function () {
         if (this.build(targetSite) === ERR_NOT_IN_RANGE) {
             this.moveTo(targetSite, {visualizePathStyle: {stroke: '#ffffff'}});
         }
-    } else {
-        // Transition to repairing only if there are no construction sites
-        this.memory.state = global.STATE_REPAIRING_ENERGY;
-        this.say("🔧");
     }
-
     if (this.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
         this.memory.state = global.STATE_HARVESTING_ENERGY;
         this.say("⛏️");
@@ -212,7 +198,7 @@ Creep.prototype.stateRepairEnergy = function () {
     }
 };
 
-Creep.prototype.stateFighting = function() {
+Creep.prototype.stateFighting = function () {
     // Replace 'TargetFlag' with the name of your flag
     let flag = Game.flags['ATTACK'];
 
@@ -223,9 +209,17 @@ Creep.prototype.stateFighting = function() {
         return;
     }
 
-    // Check if the creep is not in the flag's room or if the flag's room is undefined
+    // Move to the flag's room if not already there
     if (!flag.room || this.room.name !== flag.room.name) {
-        // Move towards the flag's position
+        this.moveTo(flag, {visualizePathStyle: {stroke: '#ff0000'}});
+        return;
+    }
+
+    // Find the closest enemy in the room
+    let closestEnemy = this.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+
+    // If there are no enemies, move to the flag's position
+    if (!closestEnemy) {
         this.moveTo(flag, {visualizePathStyle: {stroke: '#ff0000'}});
         return;
     }
@@ -233,25 +227,23 @@ Creep.prototype.stateFighting = function() {
     // Try to retrieve the targeted enemy from memory
     let target = Game.getObjectById(this.memory.targetId);
 
-    // If the targeted enemy doesn't exist or is dead, find a new target
+    // If the targeted enemy doesn't exist or is dead, update the target to the closest enemy
     if (!target || target.hits <= 0) {
-        let closestEnemy = this.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        if (closestEnemy) {
-            this.memory.targetId = closestEnemy.id;
-            target = closestEnemy;
-        }
+        this.memory.targetId = closestEnemy.id;
+        target = closestEnemy;
     }
 
     // If a target is available, attack it
-    if (target) {
-        if (this.attack(target) === ERR_NOT_IN_RANGE) {
-            this.moveTo(target, {visualizePathStyle: {stroke: '#ff0000'}});
-        }
-    } else {
-        // Clear the memory if no target is found
+    if (this.attack(target) === ERR_NOT_IN_RANGE) {
+        this.moveTo(target, {visualizePathStyle: {stroke: '#ff0000'}});
+    }
+
+    // Clear the memory if no target is found
+    if (!target) {
         delete this.memory.targetId;
     }
 };
+
 
 
 
