@@ -6,8 +6,8 @@ var roleBuilder = require('role.builder');
 var roleFighter = require('role.fighter');
 var roleRenamer = require('role.renamer');
 
-
-const workerParts = [WORK,WORK, CARRY, MOVE];
+const harvesterParts = [WORK,WORK, CARRY, MOVE];
+const workerParts = [WORK,WORK, CARRY, MOVE, MOVE];
 const renamerParts = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
 const fighterParts = [ATTACK,MOVE];
 
@@ -32,9 +32,9 @@ module.exports.loop = function () {
         Game.spawns['Spawn1'].spawnCreep(renamerParts, newName,
             {memory: {role: 'renamer'}});
     }
-    if(harvesters.length < 2) {
+    if(harvesters.length < 3) {
         var newName = 'Harvester' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
+        Game.spawns['Spawn1'].spawnCreep(harvesterParts, newName,
             {memory: {role: 'harvester'}});
     }
     if(upgraders.length < 2) {
