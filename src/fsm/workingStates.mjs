@@ -11,7 +11,7 @@ export const stateHarvestEnergy = function (creep) {
         creep.memory.targetSourceId = targetSource.id;
     }
 
-    if (creep.harvest(targetSource) === ERR_NOT_IN_RANGE) {
+    if (creep.harvest(targetSource) === ERR_NOT_IN_RANGE || ERR_NOT_ENOUGH_RESOURCES) {
         creep.moveTo(targetSource, {visualizePathStyle: {stroke: '#ffaa00'}});
     }
 
@@ -96,6 +96,7 @@ export const stateRepairEnergy = function (creep) {
             creep.memory.targetRoadId = targetRoad.id;
         }
     }
+
 };
 
 export const stateFighting = function (creep) {

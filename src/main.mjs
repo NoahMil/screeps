@@ -76,7 +76,8 @@ module.exports.loop = function () {
         }
     }
 
-    const tower = Game.getObjectById('65b3b5cd85e04a08b5376477');
+    const tower = Game.getObjectById('65b3b5cd85e04a08b5376477' && '65b8f4d685e04a08b53a5273');
+
     if (tower) {
         const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
         if (closestHostile) {
@@ -84,7 +85,7 @@ module.exports.loop = function () {
         } else {
             const damagedWalls = tower.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    if (structure.structureType === STRUCTURE_WALL && structure.hits < structure.hitsMax * 0.50) {
+                    if (structure.structureType === STRUCTURE_WALL && structure.hits < structure.hitsMax * 0.010) {
                         return true;
                     } else if (structure.structureType === STRUCTURE_ROAD && structure.hits < structure.hitsMax * 0.90) {
                         return true;

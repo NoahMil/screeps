@@ -5,7 +5,7 @@ export const runBuilder = function (creep) {
     switch (creep.memory.state) {
         case STATES.HARVESTING_ENERGY:
             stateHarvestEnergy(creep);
-            if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0 && creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+            if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
                 const constructionSites = creep.room.find(FIND_CONSTRUCTION_SITES);
                 if (constructionSites.length){
                     creep.memory.state = STATES.BUILDING_ENERGY;
