@@ -6,6 +6,8 @@ export const STATES = {
     BUILDING_ENERGY: 'building_energy',
     UPGRADING_ENERGY: 'upgrading_energy',
     REPAIRING_ENERGY: 'repairing_energy',
-    FIGHTING: 'fighting'
+    FIGHTING: 'fighting',
+    CLAIMING: 'claiming',
+    EXPLORING: 'exploring',
 }
 

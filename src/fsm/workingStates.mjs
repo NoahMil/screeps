@@ -1,24 +1,37 @@
 import {STATES} from "./constants.mjs";
 
 export const stateHarvestEnergy = function (creep) {
-    const sources = creep.room.find(FIND_SOURCES);
+    // If the creep already has a target source, continue to use it
     let targetSource = null;
     if (creep.memory.targetSourceId) {
         targetSource = Game.getObjectById(creep.memory.targetSourceId);
+
+        // Clear the memory if the source is null (e.g., source depleted)
+        if (!targetSource) {
+            delete creep.memory.targetSourceId;
+        }
     }
+
+    // If the creep doesn't have a target source, find one
     if (!targetSource) {
-        targetSource = sources[Math.floor(Math.random() * sources.length)];
+        const sources = creep.room.find(FIND_SOURCES);
+        const creepsAtSources = countCreepsAtSources(_.filter(Game.creeps, (c) => c.memory.role === creep.memory.role), sources);
+
+        // Choose the source with fewer creeps assigned to it
+        let leastAssignedSourceIndex = creepsAtSources.indexOf(Math.min(...creepsAtSources));
+        targetSource = sources[leastAssignedSourceIndex];
         creep.memory.targetSourceId = targetSource.id;
     }
 
-    if (creep.harvest(targetSource) === ERR_NOT_IN_RANGE || ERR_NOT_ENOUGH_RESOURCES) {
+    // Harvest from the target source
+    if (creep.harvest(targetSource) === ERR_NOT_IN_RANGE) {
         creep.moveTo(targetSource, {visualizePathStyle: {stroke: '#ffaa00'}});
     }
 
-    if (creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-        creep.memory.targetourceId = null;
-    }
-}
+    // Update the state to harvesting
+    creep.memory.state = STATES.HARVESTING_ENERGY;
+};
+
 
 export const stateDeliverEnergy = function (creep) {
     // Retrieve the target from memory, if it exists
@@ -36,14 +49,23 @@ export const stateDeliverEnergy = function (creep) {
     if (!target) {
         var deliverySpots = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER || structure.structureType === STRUCTURE_EXTENSION) &&
+                return (structure.structureType === STRUCTURE_EXTENSION ||
+                        structure.structureType === STRUCTURE_TOWER) &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
         });
 
         if (deliverySpots.length > 0) {
-            const randomIndex = Math.floor(Math.random() * deliverySpots.length);
-            target = deliverySpots[randomIndex];
+            // Sort the spots by priority and distance
+            deliverySpots.sort((a, b) => {
+                const priorityDiff = getStructurePriority(a.structureType) - getStructurePriority(b.structureType);
+                if (priorityDiff === 0) {
+                    return creep.pos.getRangeTo(a) - creep.pos.getRangeTo(b);
+                }
+                return priorityDiff;
+            });
+
+            target = deliverySpots[0];
             // Save the target in memory for the next tick
             creep.memory.deliveryTargetId = target.id;
         }
@@ -55,6 +77,19 @@ export const stateDeliverEnergy = function (creep) {
     }
 };
 
+// Helper function to get priority based on structure type
+function getStructurePriority(structureType) {
+    switch (structureType) {
+        case STRUCTURE_EXTENSION:
+            return 1;
+        case STRUCTURE_TOWER:
+            return 2;
+        case STRUCTURE_SPAWN:
+            return 3;
+        default:
+            return 99;
+    }
+}
 
 
 export const stateLootEnergy = function (creep) {
@@ -138,7 +173,7 @@ export const stateFighting = function (creep) {
 
     // Move to the flag's room if not already there
     if (!flag.room || creep.room.name !== flag.room.name) {
-        creep.moveTo(flag, {visualizePathStyle: {stroke: '#ff0000'}});
+        creep.moveTo(flag, {visualizePathStyle: {stroke: '#003cff'}});
         return;
     }
 
@@ -147,7 +182,7 @@ export const stateFighting = function (creep) {
 
     // If there are no enemies, move to the flag's position
     if (!closestEnemy) {
-        creep.moveTo(flag, {visualizePathStyle: {stroke: '#ff0000'}});
+        creep.moveTo(flag, {visualizePathStyle: {stroke: '#003cff'}});
         return;
     }
 
@@ -174,15 +209,71 @@ export const stateHarvestEnergyAnotherRoom = function (creep) {
     // Check if the flag exists
     if (!flag) {
         console.log('Flag not found: Upgraders');
+        return;
+    }
+
+    // Move to the flag's room if not already there or if the room is not visible
+    if (flag.room === undefined || creep.room.name !== flag.room.name) {
+        creep.moveTo(flag, {visualizePathStyle: {stroke: '#003cff'}});
+        return;
+    }
+
+    stateHarvestEnergy(creep);
+};
+
+
+function countCreepsAtSources(creeps, sources) {
+    const creepsAtSources = sources.map(() => 0);
+
+    creeps.forEach(creep => {
+        if (creep.memory.targetSourceId) {
+            const sourceIndex = sources.findIndex(source => source.id === creep.memory.targetSourceId);
+            if (sourceIndex !== -1) {
+                creepsAtSources[sourceIndex]++;
+            }
+        }
+    });
+
+    return creepsAtSources;
+};
+
+export const stateClaimEnergy = function (creep) {
+    let flag = Game.flags['Claim'];
+
+    // Check if the flag exists
+    if (!flag) {
+        console.log('Flag not found: Claim');
         // Handle the situation when the flag is not found
         return;
     }
 
     // Move to the flag's room if not already there
     if (!flag.room || creep.room.name !== flag.room.name) {
-        creep.moveTo(flag, {visualizePathStyle: {stroke: '#1aff00'}});
+        creep.moveTo(flag, {visualizePathStyle: {stroke: '#003cff'}});
         return;
     }
 
-    stateHarvestEnergy(creep);
+    if(creep.room.controller) {
+        if(creep.claimController(creep.room.controller) === ERR_NOT_IN_RANGE) {
+            creep.moveTo(creep.room.controller);
+        }
+    }
 };
+
+export const stateExplore = function (creep) {
+    let flag = Game.flags['Explore'];
+
+    // Check if the flag exists
+    if (!flag) {
+        console.log('Flag not found: Claim');
+        // Handle the situation when the flag is not found
+        return;
+    }
+
+    // Move to the flag's room if not already there
+    if (!flag.room || creep.room.name !== flag.room.name) {
+        creep.moveTo(flag, {visualizePathStyle: {stroke: '#003cff'}});
+        return;
+    }
+};
+

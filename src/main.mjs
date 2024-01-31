@@ -3,19 +3,25 @@ import {runHarvester} from "./role/harvester.mjs";
 import {runUpgrader} from "./role/upgrader.mjs";
 import {runBuilder} from "./role/builder.mjs";
 import {runFighter} from "./role/fighter.mjs";
+import {runClaimer} from "./role/claimer.mjs";
+import {runBuilderOutside} from "./role/builderOutside.mjs";
 
-const harvesterParts = [WORK, CARRY, CARRY, MOVE, MOVE];
+const harvesterParts = [WORK, WORK, CARRY, CARRY, MOVE];
 const workerParts = [WORK,WORK, CARRY,CARRY, MOVE, MOVE];
 const upgradersParts = [WORK,WORK, CARRY, MOVE, MOVE, MOVE];
 const renamerParts = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-const fighterParts = [ATTACK,ATTACK, MOVE, MOVE];
+const fighterParts = [ATTACK,ATTACK, ATTACK, MOVE, MOVE, MOVE, MOVE, MOVE, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH];
+const claimersParts = [CLAIM, MOVE];
 
 module.exports.loop = function () {
     var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester');
     var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role === 'upgrader');
     var builders = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder');
+    var buildersOutside = _.filter(Game.creeps, (creep) => creep.memory.role === 'builderOutside');
     var fighters = _.filter(Game.creeps, (creep) => creep.memory.role === 'fighter');
     var renamers = _.filter(Game.creeps, (creep) => creep.memory.role === 'renamer');
+    var claimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'claimer');
+
 
     // Stuff
     for(const name in Memory.creeps) {
@@ -25,27 +31,32 @@ module.exports.loop = function () {
     }
 
     // Spawner
-    if (renamers.length !== 0)
-    {const newName = 'Renamer' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep(renamerParts, newName,
-            {memory: {role: 'renamer', homeRoom: 'W1N1'}});
+    if (buildersOutside.length < 0)
+    {const newName = 'BuilderOutside' + Game.time;
+        Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
+            {memory: {role: 'builderOutside', homeRoom: 'W1N1'}});
     }
-    if(harvesters.length < 5) {
+    if (claimersParts.length < 1)
+    {const newName = 'Claimer' + Game.time;
+        Game.spawns['Spawn1'].spawnCreep(claimersParts, newName,
+            {memory: {role: 'claimer', homeRoom: 'W1N1'}});
+    }
+    if(harvesters.length < 8) {
         const newName = 'Harvester' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(harvesterParts, newName,
             {memory: {role: 'harvester', homeRoom: 'W1N1'}});
     }
-    if(upgraders.length < 3) {
+    if(upgraders.length < 2) {
         const newName = 'Upgrader' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(upgradersParts, newName,
             {memory: {role: 'upgrader',homeRoom: Game.spawns['Spawn1'].room.name}});
     }
-    if(builders.length < 10 && harvesters.length >= 4 && upgraders.length >= 2 ) {
+    if(builders.length < 6) {
         const newName = 'Builder' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(workerParts, newName,
             {memory: {role: 'builder', homeRoom: 'W1N1'}});
     }
-    if(fighters.length < 0) {
+    if(fighters.length < 12) {
         const newName = 'Fighter' + Game.time;
         Game.spawns['Spawn1'].spawnCreep(fighterParts, newName, {
             memory: { role: 'fighter', targetRoom: 'W2N1'}});
@@ -75,6 +86,12 @@ module.exports.loop = function () {
         if(creep.memory.role === 'fighter') {
             runFighter(creep);
         }
+        if(creep.memory.role === 'claimer') {
+            runClaimer(creep);
+        }
+        if(creep.memory.role === 'builderOutside') {
+            runBuilderOutside(creep);
+        }
     }
 
     function manageTowers() {
@@ -88,32 +105,29 @@ module.exports.loop = function () {
                 if (closestHostile) {
                     tower.attack(closestHostile);
                 } else {
-                    const damagedWalls = tower.room.find(FIND_STRUCTURES, {
+                    const damagedStructures = tower.room.find(FIND_STRUCTURES, {
                         filter: (structure) => {
-                            if (structure.structureType === STRUCTURE_WALL || structure.structureType === STRUCTURE_RAMPART) {
-                                return structure.hits < structure.hitsMax * 0.010;
-                            } else if (structure.structureType === STRUCTURE_ROAD) {
-                                return structure.hits < structure.hitsMax * 0.90;
-                            }
-                            return false;
+                            return (structure.structureType === STRUCTURE_ROAD && structure.hits < structure.hitsMax * 0.90) ||
+                                (structure.structureType === STRUCTURE_RAMPART && structure.hits < structure.hitsMax * 0.15);
                         }
                     });
 
-                    if (damagedWalls.length > 0) {
-                        const lowestWall = damagedWalls.reduce((lowest, structure) => {
-                            return (lowest && lowest.hits < structure.hits) ? lowest : structure;
-                        }, null);
+                    if (damagedStructures.length > 0) {
+                        // Repair the most damaged structure (road or rampart)
+                        const mostDamagedStructure = damagedStructures.reduce((lowest, structure) => {
+                            return (lowest.hits < structure.hits) ? lowest : structure;
+                        });
 
-                        if (lowestWall) {
-                            tower.repair(lowestWall);
-                        }
+                        tower.repair(mostDamagedStructure);
                     }
                 }
             }
         });
     }
 
+
 // Call the function in your main loop or appropriate place
     manageTowers();
+
 
 }
