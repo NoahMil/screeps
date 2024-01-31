@@ -21,22 +21,40 @@ export const stateHarvestEnergy = function (creep) {
 }
 
 export const stateDeliverEnergy = function (creep) {
-    var deliverySpots = creep.room.find(FIND_STRUCTURES, {
-        filter: (structure) => {
-            return (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER || structure.structureType === STRUCTURE_EXTENSION) &&
-                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-        }
-    });
-
-    // Proceed to transfer energy to a random delivery spot
-    if (deliverySpots.length > 0) {
-        const randomIndex = Math.floor(Math.random() * deliverySpots.length);
-        const randomDeliverySpot = deliverySpots[randomIndex];
-        if (randomDeliverySpot && creep.transfer(randomDeliverySpot, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(randomDeliverySpot, {visualizePathStyle: {stroke: '#ffffff'}});
+    // Retrieve the target from memory, if it exists
+    let target = null;
+    if (creep.memory.deliveryTargetId) {
+        target = Game.getObjectById(creep.memory.deliveryTargetId);
+        // Clear the target from memory if it's no longer valid
+        if (!target || target.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+            target = null;
+            delete creep.memory.deliveryTargetId;
         }
     }
+
+    // If no target in memory, find a new one
+    if (!target) {
+        var deliverySpots = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER || structure.structureType === STRUCTURE_EXTENSION) &&
+                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+            }
+        });
+
+        if (deliverySpots.length > 0) {
+            const randomIndex = Math.floor(Math.random() * deliverySpots.length);
+            target = deliverySpots[randomIndex];
+            // Save the target in memory for the next tick
+            creep.memory.deliveryTargetId = target.id;
+        }
+    }
+
+    // Proceed to transfer energy to the target
+    if (target && creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+        creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
+    }
 };
+
 
 
 export const stateLootEnergy = function (creep) {
@@ -75,9 +93,17 @@ export const stateBuildEnergy = function (creep) {
     }
 };
 
-export const stateUpgradeEnergy = function (creep) {
+export const stateUpgradeEnergy = function (creep, homeRoomName) {
+    if (creep.room.name !== homeRoomName) {
+        // Find an exit to the home room
+        const exitDir = creep.room.findExitTo(homeRoomName);
+        const exit = creep.pos.findClosestByRange(exitDir);
+        creep.moveTo(exit);
+        return;
+    }
+
     if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
-        creep.moveTo(creep.room.controller);
+        creep.moveTo(creep.room.controller, {visualizePathStyle: {stroke: '#ffffff'}});
     }
 };
 
@@ -140,4 +166,23 @@ export const stateFighting = function (creep) {
     if (!target) {
         delete creep.memory.targetId;
     }
+};
+
+export const stateHarvestEnergyAnotherRoom = function (creep) {
+    let flag = Game.flags['Upgraders'];
+
+    // Check if the flag exists
+    if (!flag) {
+        console.log('Flag not found: Upgraders');
+        // Handle the situation when the flag is not found
+        return;
+    }
+
+    // Move to the flag's room if not already there
+    if (!flag.room || creep.room.name !== flag.room.name) {
+        creep.moveTo(flag, {visualizePathStyle: {stroke: '#1aff00'}});
+        return;
+    }
+
+    stateHarvestEnergy(creep);
 };
